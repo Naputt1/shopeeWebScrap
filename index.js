@@ -249,7 +249,7 @@ async function getProductInfo(page){
   }
 
 
-  return await page.evaluate(() => {
+  return await page.evaluate(async() => {
     const productInfo = {};
 
   // const bshopLogged = shopInfoList.hasOwnProperty(
@@ -340,8 +340,28 @@ console.log('options')
         productInfo['product_info'][label] = brand.innerHTML;
         continue;
       }
-
+      
       const data = info.querySelector('div');
+      if (!data){
+        let scrollPromise = new Promise((resolve, reject) => {
+        console.log("promise", label);
+        const intervalID = setInterval(
+          (info, label) => {
+            info.scrollIntoView();
+            let div = info.querySelector('div');
+            if (div) {
+              clearInterval(intervalID);
+              console.log("resolvec", label);
+              resolve();
+            }
+          },
+          200,
+          info,
+          label
+        );});
+
+        await scrollPromise;
+      }
       if (label === 'หมวดหมู่'){
         const categoryList = data.querySelectorAll('a');
         const categoryStr = [];
@@ -353,25 +373,14 @@ console.log('options')
         continue;
       }
 
-      console.log('data')
+
+      console.log('data ' + label);
       productInfo['product_info'][label] = data.innerHTML;
+
+    
     }
 
     //shop arress
-    let scrollPromise = new Promise((resolve, reject) => {
-      const intervalID = setInterval(
-        (row,) => {
-          row.scrollIntoView();
-          let link = row.querySelector("a");
-          if (link) {
-            clearInterval(intervalID);
-            resolve();
-          }
-        },
-        200
-      );
-    });
-
     const temp = document.querySelector('a.W0LQye');
 
     if (temp){
@@ -380,7 +389,16 @@ console.log('options')
       throw new Error('a.W0LQye is null')
     }
 
-    // productInfo['shop_address'] = document.querySelector('a.W0LQye').getAttribute("href");
+          //price 
+      console.log('full price')
+      const fullPrice = document.querySelector('div.Y3DvsN');
+      if (fullPrice){
+        productInfo['full_price'] = fullPrice.innerHTML;
+      }
+      console.log('price')
+      productInfo['price'] = document.querySelector('div.pqTWkA').innerHTML;
+
+
 
     return productInfo;
   });
