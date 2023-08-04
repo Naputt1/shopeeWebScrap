@@ -79,7 +79,7 @@ function wait(delay) {
   });
 }
 
-async function downloadCSV(page, file, filename) {
+async function downloadCSV(file, filename) {
  const csvContent = file;
 
  fs.writeFile(filename, csvContent, "utf8", (err) => {
@@ -89,6 +89,16 @@ async function downloadCSV(page, file, filename) {
      console.log("Data has been written to", filename);
    }
  });
+}
+
+async function saveAsJson(data, filename) {
+  fs.writeFile(filename, data, 'utf8', (err) => {
+    if (err) {
+      console.error('Error writing JSON file:', err);
+    } else {
+      console.log('JSON data has been written to the file:', filename);
+    }
+  });
 }
 
 async function login(page) {
@@ -195,9 +205,9 @@ async function checkForNextPage(page){
 //   productName: string;
 //   fullprice: number;
 //   reduceprice: number;
+//   productScore: number;
 //   desc: String;
 //   productDetail: {};
-//   stock: number;
 //   sold: number;
 //   color:[];
 //   size:[];
@@ -212,29 +222,116 @@ async function checkForNextPage(page){
 //   joined:String;
 // }
 
-async function getProductInfo(page, shopInfoList){
+const ClassArray = {
+  'productName':'_44qnta',
+  'desc':'irIKAp',
+  'productScore':'_046PXf',
+  'reduceprice':'pqTWkA',
+  'fullprice':'Y3DvsN',
+  'storeName':'VlDReK',
+}
 
-  const productInfo = {};
+async function getProductInfo(page){
   await page.waitForSelector("div._44qnta");
 
-  await page.evaluate(() => {
+  return await page.evaluate(() => {
+    const productInfo = {};
 
-  const bshopLogged = shopInfoList.hasOwnProperty(
-    document.querySelector("div.VlDReK")
-  );
+  // const bshopLogged = shopInfoList.hasOwnProperty(
+  //   document.querySelector("div.VlDReK")
+  // );
 
 
-
+    console.log('productNameWrapper')
     const productNameWrapper = document.querySelector("div._44qnta");
 
+    console.log('shop type')
     //check if shoppe affiliate or recomended
     const shopType = productNameWrapper.querySelector("div.NOygQS");
     if (shopType){
       productInfo["shop_type"] = shopType.innerHTML;
     }
-// Y3DvsN;
-    productInfo['']
+    productInfo['product_name'] = productNameWrapper.querySelector('span').innerHTML;
 
+
+    console.log('score')
+    const scoreWrapper = document.querySelector("div.X5u-5c");
+    const scoreList = scoreWrapper.querySelectorAll('div.flex');
+    if (scoreList){
+      for (const score of scoreList){
+        const star = score.querySelector('div._046PXf');
+        if (star){
+          console.log('star')
+          productInfo['productScore'] = star.innerHTML;
+          continue;
+        }
+
+        console.log('rating')
+        const rating = score.querySelector('div._1k47d8');
+        if (rating){
+          productInfo['rating'] = rating.innerHTML;
+        }
+
+        console.log('sold num')
+        const soldNum = scoreWrapper.querySelector('div.eaFIAE').querySelector('div.e9sAa2');
+        productInfo['sold'] = soldNum.innerHTML;
+      }
+    }else{
+      productInfo['productScore'] = -1;
+    }
+
+    console.log('desc')
+    //description
+    const desc = document.querySelector('p.irIKAp');
+    if (desc){
+      productInfo['desc'] = desc.innerHTML;
+    }
+
+console.log('options')
+    // product opetion
+    const opetionWapper = document.querySelector('div.j9be9C');
+    const opetionCol = opetionWapper.querySelector('div.flex-column');
+    const opetionList = opetionCol.querySelectorAll("div.items-center");
+
+    productInfo['product_options'] = {};
+
+    for (const opetion of opetionList){
+          console.log('label')
+
+      const opetionNameElement = opetion.querySelector('label.oN9nMU');
+      if (opetionNameElement){
+        productInfo['product_options'][opetionNameElement.innerHTML] = [];
+
+        const opetionoptions = opetion.querySelector('div.bR6mEk').querySelectorAll('button.product-variation');
+        for (const opetionoption of opetionoptions){
+          console.log('opetionoption')
+          productInfo['product_options'][opetionNameElement.innerHTML].push(opetionoption.innerHTML);
+        }
+      }
+    }
+
+    //product info
+    const infoCol = document.querySelectorAll('div.dR8kXc');
+
+    productInfo['product_info'] = {};
+
+    for (const info of infoCol){
+      const label = info.querySelector('label').innerHTML;
+      const data = info.querySelector('div');
+      if (label === 'หมวดหมู่'){
+        const categoryList = data.querySelectorAll('a');
+        const categoryStr = [];
+        for (category of categoryList){
+          categoryStr.push(category.innerHTML)
+        }
+        productInfo['product_info'][label] = categoryStr.join('>');
+        continue;
+      }
+
+      productInfo['product_info'][label] = data.innerHTML;
+    }
+
+    return productInfo;
   });
 }
 
@@ -260,6 +357,10 @@ const k = async () => {
 
     //wait for page to redirect to login page for some reason?
     await login(page);
+
+    const data = await getProductInfo(page);
+
+    saveAsJson(JSON.stringify(data, null, 2), 'product.json');
 
 
     return;
