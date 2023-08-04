@@ -331,6 +331,9 @@ console.log('options')
       productInfo['product_info'][label] = data.innerHTML;
     }
 
+    //shop arress
+    productInfo['shop_address'] = document.querySelector('a.W0LQye').getAttribute("href");
+
     return productInfo;
   });
 }
@@ -349,7 +352,7 @@ const k = async () => {
     // );
 
     await page.goto(
-      "https://shopee.co.th/%E0%B8%A1%E0%B8%B5%E0%B8%94%E0%B8%9B%E0%B8%AD%E0%B8%81%E0%B8%9C%E0%B8%A5%E0%B9%84%E0%B8%A1%E0%B9%89-%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%82%E0%B8%B9%E0%B8%94%E0%B8%A1%E0%B8%B0%E0%B8%A5%E0%B8%B0%E0%B8%81%E0%B8%AD-%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%82%E0%B8%B9%E0%B8%94-%E0%B8%A1%E0%B8%B0%E0%B8%A5%E0%B8%B0%E0%B8%81%E0%B8%AD-%E0%B8%A1%E0%B8%B5%E0%B8%94%E0%B8%9B%E0%B8%A5%E0%B8%AD%E0%B8%81%E0%B8%9C%E0%B8%A5%E0%B9%84%E0%B8%A1%E0%B9%89-%E0%B8%A1%E0%B8%B5%E0%B8%94%E0%B8%82%E0%B8%B9%E0%B8%94%E0%B8%A1%E0%B8%B0%E0%B8%A5%E0%B8%B0%E0%B8%81%E0%B8%AD-%E0%B8%A1%E0%B8%B5%E0%B8%94%E0%B8%AA%E0%B9%84%E0%B8%A5%E0%B8%94%E0%B9%8C-%E0%B8%95%E0%B8%B1%E0%B8%94-%E0%B8%8B%E0%B8%AD%E0%B8%A2-%E0%B8%AB%E0%B8%B1%E0%B9%88%E0%B8%99-%E0%B8%9B%E0%B8%AD%E0%B8%81-%E0%B8%9C%E0%B8%A5%E0%B9%84%E0%B8%A1%E0%B9%89-%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%82%E0%B8%B9%E0%B8%94%E0%B8%9C%E0%B8%B1%E0%B8%81-i.21735572.412231442",
+      "https://shopee.co.th/%E0%B8%A3%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B9%81%E0%B8%95%E0%B8%B0-%E0%B9%81%E0%B8%9A%E0%B8%9A%E0%B8%AA%E0%B8%A7%E0%B8%A1-%E0%B8%A3%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B9%81%E0%B8%95%E0%B8%B0%E0%B9%83%E0%B8%AA%E0%B9%88%E0%B9%83%E0%B8%9A%E0%B9%89%E0%B8%B2%E0%B8%99-%E0%B8%A3%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B9%80%E0%B8%9E%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%AA%E0%B8%B8%E0%B8%82%E0%B8%A0%E0%B8%B2%E0%B8%9E-%E0%B8%9E%E0%B8%B7%E0%B9%89%E0%B8%99%E0%B8%AB%E0%B8%99%E0%B8%B2-%E0%B8%81%E0%B8%B1%E0%B8%99%E0%B8%A5%E0%B8%B7%E0%B9%88%E0%B8%99-%E0%B9%81%E0%B8%9A%E0%B8%9A%E0%B8%AA%E0%B8%A7%E0%B8%A1-%E0%B8%AA%E0%B8%B3%E0%B8%AB%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B8%9C%E0%B8%B9%E0%B9%89%E0%B8%AB%E0%B8%8D%E0%B8%B4%E0%B8%87%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%9C%E0%B8%B9%E0%B9%89%E0%B8%8A%E0%B8%B2%E0%B8%A2-HomeUP-i.81071601.20514574308?sp_atk=96033b69-37bf-41f9-8859-d0a80e1a12b6&xptdk=96033b69-37bf-41f9-8859-d0a80e1a12b6",
       {
         waitUntil: "load",
       }
@@ -357,10 +360,24 @@ const k = async () => {
 
     //wait for page to redirect to login page for some reason?
     await login(page);
+    const dataList = [];
+    // for (address of linkedAddress){
+    //   await page.goto(shopeeHomeUrl + address,
+    //   {
+    //     waitUntil: "load",
+    //   }
+    // );
+    const temp = await getProductInfo(page);
+    temp['product_address'] = 'https://shopee.co.th/%E0%B8%A3%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B9%81%E0%B8%95%E0%B8%B0-%E0%B9%81%E0%B8%9A%E0%B8%9A%E0%B8%AA%E0%B8%A7%E0%B8%A1-%E0%B8%A3%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B9%81%E0%B8%95%E0%B8%B0%E0%B9%83%E0%B8%AA%E0%B9%88%E0%B9%83%E0%B8%9A%E0%B9%89%E0%B8%B2%E0%B8%99-%E0%B8%A3%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B9%80%E0%B8%9E%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%AA%E0%B8%B8%E0%B8%82%E0%B8%A0%E0%B8%B2%E0%B8%9E-%E0%B8%9E%E0%B8%B7%E0%B9%89%E0%B8%99%E0%B8%AB%E0%B8%99%E0%B8%B2-%E0%B8%81%E0%B8%B1%E0%B8%99%E0%B8%A5%E0%B8%B7%E0%B9%88%E0%B8%99-%E0%B9%81%E0%B8%9A%E0%B8%9A%E0%B8%AA%E0%B8%A7%E0%B8%A1-%E0%B8%AA%E0%B8%B3%E0%B8%AB%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B8%9C%E0%B8%B9%E0%B9%89%E0%B8%AB%E0%B8%8D%E0%B8%B4%E0%B8%87%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%9C%E0%B8%B9%E0%B9%89%E0%B8%8A%E0%B8%B2%E0%B8%A2-HomeUP-i.81071601.20514574308?sp_atk=96033b69-37bf-41f9-8859-d0a80e1a12b6&xptdk=96033b69-37bf-41f9-8859-d0a80e1a12b6&is_from_login=true';
+    // temp['product_address'] = shopeeHomeUrl + address;
+    temp['shop_address'] = shopeeHomeUrl + temp['shop_address'];
+    // dataList = dataList.concat(await getProductInfo(page));
+    //   const data = await getProductInfo(page);
+    // }
 
-    const data = await getProductInfo(page);
+    // const data = await getProductInfo(page);
 
-    saveAsJson(JSON.stringify(data, null, 2), 'product.json');
+    saveAsJson(JSON.stringify(temp, null, 2), 'product.json');
 
 
     return;
