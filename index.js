@@ -232,7 +232,22 @@ const ClassArray = {
 }
 
 async function getProductInfo(page){
-  await page.waitForSelector("div._44qnta");
+  try {
+    await page.waitForSelector("div._44qnta");
+  }catch (err){
+    const bPageNotFound = await page.evaluate(() => {
+      const PageNotFound = document.querySelector('div.product-not-exist__content');
+      if (PageNotFound){
+        return false;
+      }
+      return true;
+    })
+    if (!bPageNotFound){
+      return false;
+    }
+    throw new Error('div._44qnta not found: ' +  err);
+  }
+
 
   return await page.evaluate(() => {
     const productInfo = {};
@@ -311,28 +326,61 @@ console.log('options')
     }
 
     //product info
+    console.log('info')
     const infoCol = document.querySelectorAll('div.dR8kXc');
 
     productInfo['product_info'] = {};
 
     for (const info of infoCol){
+      console.log('label')
       const label = info.querySelector('label').innerHTML;
+
+      if (label === 'ยี่ห้อ'){
+        const brand = info.querySelector('a');
+        productInfo['product_info'][label] = brand.innerHTML;
+        continue;
+      }
+
       const data = info.querySelector('div');
       if (label === 'หมวดหมู่'){
         const categoryList = data.querySelectorAll('a');
         const categoryStr = [];
         for (category of categoryList){
+          console.log('category')
           categoryStr.push(category.innerHTML)
         }
         productInfo['product_info'][label] = categoryStr.join('>');
         continue;
       }
 
+      console.log('data')
       productInfo['product_info'][label] = data.innerHTML;
     }
 
     //shop arress
-    productInfo['shop_address'] = document.querySelector('a.W0LQye').getAttribute("href");
+    let scrollPromise = new Promise((resolve, reject) => {
+      const intervalID = setInterval(
+        (row,) => {
+          row.scrollIntoView();
+          let link = row.querySelector("a");
+          if (link) {
+            clearInterval(intervalID);
+            resolve();
+          }
+        },
+        200
+      );
+    });
+
+    const temp = document.querySelector('a.W0LQye');
+
+    if (temp){
+      productInfo['shop_address'] = temp.getAttribute("href");
+    }else{
+      throw new Error('a.W0LQye is null')
+    }
+
+    // productInfo['shop_address'] = document.querySelector('a.W0LQye').getAttribute("href");
 
     return productInfo;
   });
@@ -352,32 +400,51 @@ const k = async () => {
     // );
 
     await page.goto(
-      "https://shopee.co.th/%E0%B8%A3%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B9%81%E0%B8%95%E0%B8%B0-%E0%B9%81%E0%B8%9A%E0%B8%9A%E0%B8%AA%E0%B8%A7%E0%B8%A1-%E0%B8%A3%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B9%81%E0%B8%95%E0%B8%B0%E0%B9%83%E0%B8%AA%E0%B9%88%E0%B9%83%E0%B8%9A%E0%B9%89%E0%B8%B2%E0%B8%99-%E0%B8%A3%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B9%80%E0%B8%9E%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%AA%E0%B8%B8%E0%B8%82%E0%B8%A0%E0%B8%B2%E0%B8%9E-%E0%B8%9E%E0%B8%B7%E0%B9%89%E0%B8%99%E0%B8%AB%E0%B8%99%E0%B8%B2-%E0%B8%81%E0%B8%B1%E0%B8%99%E0%B8%A5%E0%B8%B7%E0%B9%88%E0%B8%99-%E0%B9%81%E0%B8%9A%E0%B8%9A%E0%B8%AA%E0%B8%A7%E0%B8%A1-%E0%B8%AA%E0%B8%B3%E0%B8%AB%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B8%9C%E0%B8%B9%E0%B9%89%E0%B8%AB%E0%B8%8D%E0%B8%B4%E0%B8%87%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%9C%E0%B8%B9%E0%B9%89%E0%B8%8A%E0%B8%B2%E0%B8%A2-HomeUP-i.81071601.20514574308?sp_atk=96033b69-37bf-41f9-8859-d0a80e1a12b6&xptdk=96033b69-37bf-41f9-8859-d0a80e1a12b6",
+      "https://shopee.co.th/%E0%B8%9E%E0%B8%A3%E0%B9%89%E0%B8%AD%E0%B8%A1%E0%B8%AA%E0%B9%88%E0%B8%87homeproth-%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B8%A1%E0%B8%B5%E0%B8%94-%E0%B8%AB%E0%B8%B4%E0%B8%99%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B8%A1%E0%B8%B5%E0%B8%94%E0%B8%AA%E0%B8%B1%E0%B8%95%E0%B8%A7%E0%B9%8C%E0%B8%99%E0%B9%88%E0%B8%B2%E0%B8%A3%E0%B8%B1%E0%B8%81-%E0%B9%81%E0%B8%97%E0%B9%88%E0%B8%99%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B8%A1%E0%B8%B5%E0%B8%94-%E0%B8%AD%E0%B8%B8%E0%B8%9B%E0%B8%81%E0%B8%A3%E0%B8%93%E0%B9%8C%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%A1%E0%B8%B5%E0%B8%84%E0%B8%A1-%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B9%84%E0%B8%94%E0%B9%89%E0%B8%84%E0%B8%A1%E0%B8%A1%E0%B8%B2%E0%B8%81-Knife-Sharpener-i.320775209.5690642775?sp_atk=10e94fa3-bb6e-4639-9609-167bad4b1fe8&xptdk=10e94fa3-bb6e-4639-9609-167bad4b1fe8",
       {
         waitUntil: "load",
       }
     );
+// await login(page);
+// const dataList = [];
+//           const temp = await getProductInfo(page);
+//       temp['product_address'] = 'https://shopee.co.th/%E0%B8%9E%E0%B8%A3%E0%B9%89%E0%B8%AD%E0%B8%A1%E0%B8%AA%E0%B9%88%E0%B8%87homeproth-%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B8%A1%E0%B8%B5%E0%B8%94-%E0%B8%AB%E0%B8%B4%E0%B8%99%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B8%A1%E0%B8%B5%E0%B8%94%E0%B8%AA%E0%B8%B1%E0%B8%95%E0%B8%A7%E0%B9%8C%E0%B8%99%E0%B9%88%E0%B8%B2%E0%B8%A3%E0%B8%B1%E0%B8%81-%E0%B9%81%E0%B8%97%E0%B9%88%E0%B8%99%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B8%A1%E0%B8%B5%E0%B8%94-%E0%B8%AD%E0%B8%B8%E0%B8%9B%E0%B8%81%E0%B8%A3%E0%B8%93%E0%B9%8C%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%A1%E0%B8%B5%E0%B8%84%E0%B8%A1-%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B9%84%E0%B8%94%E0%B9%89%E0%B8%84%E0%B8%A1%E0%B8%A1%E0%B8%B2%E0%B8%81-Knife-Sharpener-i.320775209.5690642775?sp_atk=10e94fa3-bb6e-4639-9609-167bad4b1fe8&xptdk=10e94fa3-bb6e-4639-9609-167bad4b1fe8&is_from_login=true';
+//       temp['shop_address'] = shopeeHomeUrl + temp['shop_address'];
+//   dataList.push(temp);
 
     //wait for page to redirect to login page for some reason?
     await login(page);
+    await wait(5000);
     const dataList = [];
-    // for (address of linkedAddress){
-    //   await page.goto(shopeeHomeUrl + address,
-    //   {
-    //     waitUntil: "load",
-    //   }
-    // );
-    const temp = await getProductInfo(page);
-    temp['product_address'] = 'https://shopee.co.th/%E0%B8%A3%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B9%81%E0%B8%95%E0%B8%B0-%E0%B9%81%E0%B8%9A%E0%B8%9A%E0%B8%AA%E0%B8%A7%E0%B8%A1-%E0%B8%A3%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B9%81%E0%B8%95%E0%B8%B0%E0%B9%83%E0%B8%AA%E0%B9%88%E0%B9%83%E0%B8%9A%E0%B9%89%E0%B8%B2%E0%B8%99-%E0%B8%A3%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B9%80%E0%B8%9E%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%AA%E0%B8%B8%E0%B8%82%E0%B8%A0%E0%B8%B2%E0%B8%9E-%E0%B8%9E%E0%B8%B7%E0%B9%89%E0%B8%99%E0%B8%AB%E0%B8%99%E0%B8%B2-%E0%B8%81%E0%B8%B1%E0%B8%99%E0%B8%A5%E0%B8%B7%E0%B9%88%E0%B8%99-%E0%B9%81%E0%B8%9A%E0%B8%9A%E0%B8%AA%E0%B8%A7%E0%B8%A1-%E0%B8%AA%E0%B8%B3%E0%B8%AB%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B8%9C%E0%B8%B9%E0%B9%89%E0%B8%AB%E0%B8%8D%E0%B8%B4%E0%B8%87%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%9C%E0%B8%B9%E0%B9%89%E0%B8%8A%E0%B8%B2%E0%B8%A2-HomeUP-i.81071601.20514574308?sp_atk=96033b69-37bf-41f9-8859-d0a80e1a12b6&xptdk=96033b69-37bf-41f9-8859-d0a80e1a12b6&is_from_login=true';
-    // temp['product_address'] = shopeeHomeUrl + address;
-    temp['shop_address'] = shopeeHomeUrl + temp['shop_address'];
-    // dataList = dataList.concat(await getProductInfo(page));
-    //   const data = await getProductInfo(page);
-    // }
+    let count = 0;
+    for (address of linkedAddress){
+      count ++;
+      console.log(count)
+      await page.goto(shopeeHomeUrl + address,
+      {
+        waitUntil: "load",
+      }
+      );
+  await wait(5000);
+      const temp = await getProductInfo(page);
+      while (!temp){
+              await page.goto(shopeeHomeUrl + address,
+      {
+        waitUntil: "load",
+      });
+      await wait(5000);
+        const temp = await getProductInfo(page);
+      }
+      temp['product_address'] = shopeeHomeUrl + address;
+      temp['shop_address'] = shopeeHomeUrl + temp['shop_address'];
+  dataList.push(temp);
+    }
+
+
 
     // const data = await getProductInfo(page);
 
-    saveAsJson(JSON.stringify(temp, null, 2), 'product.json');
+    saveAsJson(JSON.stringify(dataList, null, 2), 'product.json');
 
 
     return;
