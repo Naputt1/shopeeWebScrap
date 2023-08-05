@@ -4,7 +4,10 @@ const puppeteer = require("puppeteer");
 const email = "naputtalt2@gmail.com";
 const password = "6vU5eZT#edGL8X6";
 
+
 const products = [];
+const brand = [];
+const seller = [];
 
 const shopeeHomeUrl = "https://shopee.co.th";
 
@@ -200,37 +203,11 @@ async function checkForNextPage(page){
   });
 }
 
-// interface product {
-//   storeName: string;
-//   productName: string;
-//   fullprice: number;
-//   reduceprice: number;
-//   productScore: number;
-//   desc: String;
-//   productDetail: {};
-//   sold: number;
-//   color:[];
-//   size:[];
-// }
-
-// interface seller{
-//   name:String;
-//   productCount:Number;
-//   score:number;
-//   replyPercent:Number;
-//   follower:Number;
-//   joined:String;
-// }
-
-const ClassArray = {
-  'productName':'_44qnta',
-  'desc':'irIKAp',
-  'productScore':'_046PXf',
-  'reduceprice':'pqTWkA',
-  'fullprice':'Y3DvsN',
-  'storeName':'VlDReK',
-}
-
+/**
+ * scrape product page
+ * @param  {Number} page 
+ * @return [product, seller, brand]
+ */
 async function getProductInfo(page){
   try {
     await page.waitForSelector("div._44qnta");
@@ -295,6 +272,16 @@ async function getProductInfo(page){
       productInfo['productScore'] = -1;
     }
 
+    //price 
+    console.log('full price')
+    const fullPrice = document.querySelector('div.Y3DvsN');
+    if (fullPrice){
+      productInfo['full_price'] = fullPrice.innerHTML;
+    }
+    console.log('price')
+    productInfo['price'] = document.querySelector('div.pqTWkA').innerHTML;
+
+
     console.log('desc')
     //description
     const desc = document.querySelector('p.irIKAp');
@@ -302,13 +289,15 @@ async function getProductInfo(page){
       productInfo['desc'] = desc.innerHTML;
     }
 
-console.log('options')
+    console.log('options')
     // product opetion
     const opetionWapper = document.querySelector('div.j9be9C');
     const opetionCol = opetionWapper.querySelector('div.flex-column');
     const opetionList = opetionCol.querySelectorAll("div.items-center");
 
     productInfo['product_options'] = {};
+
+    const productVariations = [];
 
     for (const opetion of opetionList){
           console.log('label')
@@ -318,6 +307,7 @@ console.log('options')
         productInfo['product_options'][opetionNameElement.innerHTML] = [];
 
         const opetionoptions = opetion.querySelector('div.bR6mEk').querySelectorAll('button.product-variation');
+        productVariations.push(opetionoptions)
         for (const opetionoption of opetionoptions){
           console.log('opetionoption')
           productInfo['product_options'][opetionNameElement.innerHTML].push(opetionoption.innerHTML);
@@ -325,6 +315,64 @@ console.log('options')
       }
     }
 
+    const variations = async(variationList, optionIndex, prevDisabled=false) => {
+      const data = [];
+      for (let i = 0; i < variationList[optionIndex].length; i++){
+        console.log(optionIndex, i, variationList[optionIndex].length)
+        bDisabled = false;
+        if (variationList[optionIndex][i].disabled){
+          console.log('btn disabled');
+          bDisabled = true;
+        }
+        await variationList[optionIndex][i].click();
+
+        if (optionIndex < variationList.length - 1){
+          data.push(await variations(variationList, optionIndex + 1, bDisabled));
+          continue;
+        }
+
+        if (prevDisabled || bDisabled){
+          data.push({
+            'stock':-1,
+            'price':-1,
+            'fullprice':-1
+          })
+          continue;
+        }
+
+        const stock = document.querySelector('div._6lioXX').querySelector('div.items-center').querySelectorAll('div:not([style])')[1];
+        console.log('length ',document.querySelector('div._6lioXX').querySelector('div.items-center').querySelectorAll('div:not([style])')[1]);
+        // console.log(document.querySelector('div._6lioXX').querySelector('div.items-center').querySelectorAll('div:not([style])')[1].innerHTML);
+        console.log('length ',document.querySelector('div._6lioXX').querySelector('div.items-center').querySelectorAll('div'));
+        const price = document.querySelector('div.pqTWkA').innerHTML;
+        const fullpriceElement = document.querySelector('div.Y3DvsN');
+        const fullprice = fullpriceElement ? fullpriceElement.innerHTML : -1;
+
+        data.push({
+          'stock':stock,
+          'price':price,
+          'fullprice':fullprice
+        })
+      }
+      // console.log(data);
+      return data;
+    };
+    
+
+    //price by option
+    console.log('price by option');
+    // console.log('productVariations', productVariations.length);
+    // console.log('fefe', productVariations[0].length)
+    let tempdata = [];
+    if (productVariations.length > 0){
+      console.log('data', productInfo);
+      console.log('length', productVariations.length);
+      console.log(productVariations);
+      tempdata = await variations(productVariations, 0);
+    }
+    productInfo['product_info_by_option'] = tempdata;
+
+    
     //product info
     console.log('info')
     const infoCol = document.querySelectorAll('div.dR8kXc');
@@ -354,11 +402,7 @@ console.log('options')
               console.log("resolvec", label);
               resolve();
             }
-          },
-          200,
-          info,
-          label
-        );});
+          },200,info,label);});
 
         await scrollPromise;
       }
@@ -389,22 +433,12 @@ console.log('options')
       throw new Error('a.W0LQye is null')
     }
 
-          //price 
-      console.log('full price')
-      const fullPrice = document.querySelector('div.Y3DvsN');
-      if (fullPrice){
-        productInfo['full_price'] = fullPrice.innerHTML;
-      }
-      console.log('price')
-      productInfo['price'] = document.querySelector('div.pqTWkA').innerHTML;
-
-
-
+console.log("return data", productInfo);
     return productInfo;
   });
 }
 
-const k = async () => {
+const main = async () => {
   try {
     const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
@@ -418,7 +452,7 @@ const k = async () => {
     // );
 
     await page.goto(
-      "https://shopee.co.th/%E0%B8%9E%E0%B8%A3%E0%B9%89%E0%B8%AD%E0%B8%A1%E0%B8%AA%E0%B9%88%E0%B8%87homeproth-%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B8%A1%E0%B8%B5%E0%B8%94-%E0%B8%AB%E0%B8%B4%E0%B8%99%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B8%A1%E0%B8%B5%E0%B8%94%E0%B8%AA%E0%B8%B1%E0%B8%95%E0%B8%A7%E0%B9%8C%E0%B8%99%E0%B9%88%E0%B8%B2%E0%B8%A3%E0%B8%B1%E0%B8%81-%E0%B9%81%E0%B8%97%E0%B9%88%E0%B8%99%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B8%A1%E0%B8%B5%E0%B8%94-%E0%B8%AD%E0%B8%B8%E0%B8%9B%E0%B8%81%E0%B8%A3%E0%B8%93%E0%B9%8C%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%A1%E0%B8%B5%E0%B8%84%E0%B8%A1-%E0%B8%A5%E0%B8%B1%E0%B8%9A%E0%B9%84%E0%B8%94%E0%B9%89%E0%B8%84%E0%B8%A1%E0%B8%A1%E0%B8%B2%E0%B8%81-Knife-Sharpener-i.320775209.5690642775?sp_atk=10e94fa3-bb6e-4639-9609-167bad4b1fe8&xptdk=10e94fa3-bb6e-4639-9609-167bad4b1fe8",
+      "https://shopee.co.th/🌈ส่งฟรี🌈-มีดหั่นขนมปังสแตนเลส-มีให้เลือก-3รูปแบบ-4ขนาด-มีดตัดเค้ก-มีดตัดขนม-มีดตัดขนมปัง-มีดหั่นขนมปัง-มีดตัดเค้กสแตนเลส-i.380919622.8829555113?sp_atk=2d8bd65c-d348-4f35-8d2a-4f7c9965ebce&xptdk=2d8bd65c-d348-4f35-8d2a-4f7c9965ebce",
       {
         waitUntil: "load",
       }
@@ -433,7 +467,22 @@ const k = async () => {
     //wait for page to redirect to login page for some reason?
     await login(page);
     await wait(5000);
+
+    try{
+      const data = await getProductInfo(page);
+    }catch(err){
+      console.log(err);
+    }
+    // await data
+      //     temp['product_address'] = shopeeHomeUrl + address;
+      // temp['shop_address'] = shopeeHomeUrl + temp['shop_address'];
+      console.log(data);
+      return;
+          saveAsJson(JSON.stringify(temp, null, 2), 'product.json');
+      return;
     const dataList = [];
+    const seller = [];
+    const brand = [];
     let count = 0;
     for (address of linkedAddress){
       count ++;
@@ -443,29 +492,29 @@ const k = async () => {
         waitUntil: "load",
       }
       );
-  await wait(5000);
+      await wait(5000);
       const temp = await getProductInfo(page);
       while (!temp){
-              await page.goto(shopeeHomeUrl + address,
-      {
-        waitUntil: "load",
-      });
-      await wait(5000);
+        await page.goto(shopeeHomeUrl + address, {waitUntil: "load",});
+        await wait(5000);
         const temp = await getProductInfo(page);
       }
       temp['product_address'] = shopeeHomeUrl + address;
       temp['shop_address'] = shopeeHomeUrl + temp['shop_address'];
-  dataList.push(temp);
+      dataList.push(temp);
     }
 
 
 
     // const data = await getProductInfo(page);
-
+    // await downloadCSV(page, linkList.join("\n"), "download.csv");
     saveAsJson(JSON.stringify(dataList, null, 2), 'product.json');
 
 
     return;
+    await browser.close();
+
+
     while (true){
       linkList = linkList.concat(await getAllLinksInRow(page));
 
@@ -561,4 +610,4 @@ const k = async () => {
   }
 };
 
-k();
+main();
