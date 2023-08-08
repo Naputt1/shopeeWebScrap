@@ -188,14 +188,14 @@ async function checkForNextPage(page){
   await page.waitForSelector("div.shopee-page-controller");
   return await page.evaluate(() => {
     const pagination = document.querySelector("div.shopee-page-controller");
-    const curPageNum = pagination.querySelector("button.shopee-button-solid").innerHTML;
+    const curPageNum = pagination.querySelector("button.shopee-button-solid").innerText;
 
     const pageList = pagination.querySelectorAll(
       "button.shopee-button-no-outline"
     );
 
     for (const page of pageList) {
-      if (page.innerHTML > curPageNum){
+      if (page.innerText > curPageNum){
         return true;
       }
     }
@@ -241,9 +241,9 @@ async function getProductInfo(page){
     //check if shoppe affiliate or recomended
     const shopType = productNameWrapper.querySelector("div.NOygQS");
     if (shopType){
-      productInfo["shop_type"] = shopType.innerHTML;
+      productInfo["shop_type"] = shopType.innerText;
     }
-    productInfo['product_name'] = productNameWrapper.querySelector('span').innerHTML;
+    productInfo['product_name'] = productNameWrapper.querySelector('span').innerText;
 
 
     console.log('score')
@@ -254,19 +254,19 @@ async function getProductInfo(page){
         const star = score.querySelector('div._046PXf');
         if (star){
           console.log('star')
-          productInfo['productScore'] = star.innerHTML;
+          productInfo['productScore'] = star.innerText;
           continue;
         }
 
         console.log('rating')
         const rating = score.querySelector('div._1k47d8');
         if (rating){
-          productInfo['rating'] = rating.innerHTML;
+          productInfo['rating'] = rating.innerText;
         }
 
         console.log('sold num')
         const soldNum = scoreWrapper.querySelector('div.eaFIAE').querySelector('div.e9sAa2');
-        productInfo['sold'] = soldNum.innerHTML;
+        productInfo['sold'] = soldNum.innerText;
       }
     }else{
       productInfo['productScore'] = -1;
@@ -276,17 +276,17 @@ async function getProductInfo(page){
     console.log('full price')
     const fullPrice = document.querySelector('div.Y3DvsN');
     if (fullPrice){
-      productInfo['full_price'] = fullPrice.innerHTML;
+      productInfo['full_price'] = fullPrice.innerText;
     }
     console.log('price')
-    productInfo['price'] = document.querySelector('div.pqTWkA').innerHTML;
+    productInfo['price'] = document.querySelector('div.pqTWkA').innerText;
 
 
     console.log('desc')
     //description
     const desc = document.querySelector('p.irIKAp');
     if (desc){
-      productInfo['desc'] = desc.innerHTML;
+      productInfo['desc'] = desc.innerText;
     }
 
     console.log('options')
@@ -304,13 +304,13 @@ async function getProductInfo(page){
 
       const opetionNameElement = opetion.querySelector('label.oN9nMU');
       if (opetionNameElement){
-        productInfo['product_options'][opetionNameElement.innerHTML] = [];
+        productInfo['product_options'][opetionNameElement.innerText] = [];
 
         const opetionoptions = opetion.querySelector('div.bR6mEk').querySelectorAll('button.product-variation');
         productVariations.push(opetionoptions)
         for (const opetionoption of opetionoptions){
           console.log('opetionoption')
-          productInfo['product_options'][opetionNameElement.innerHTML].push(opetionoption.innerHTML);
+          productInfo['product_options'][opetionNameElement.innerText].push(opetionoption.innerText);
         }
       }
     }
@@ -320,16 +320,20 @@ async function getProductInfo(page){
       for (let i = 0; i < variationList[optionIndex].length; i++){
         console.log(optionIndex, i, variationList[optionIndex].length)
         bDisabled = false;
-        if (variationList[optionIndex][i].disabled){
+        console.log('disable', variationList[optionIndex][i].getAttribute("aria-disabled"), prevDisabled)
+        if (variationList[optionIndex][i].getAttribute("aria-disabled") === 'true' || prevDisabled){
           console.log('btn disabled');
           bDisabled = true;
         }
-        await variationList[optionIndex][i].click();
 
         if (optionIndex < variationList.length - 1){
+          if (!bDisabled){
+            await variationList[optionIndex][i].click();
+          }
           data.push(await variations(variationList, optionIndex + 1, bDisabled));
           continue;
         }
+
 
         if (prevDisabled || bDisabled){
           data.push({
@@ -340,29 +344,54 @@ async function getProductInfo(page){
           continue;
         }
 
-        const stock = document.querySelector('div._6lioXX').querySelector('div.items-center').querySelectorAll('div:not([style])')[1];
-        console.log('length ',document.querySelector('div._6lioXX').querySelector('div.items-center').querySelectorAll('div:not([style])')[1]);
-        // console.log(document.querySelector('div._6lioXX').querySelector('div.items-center').querySelectorAll('div:not([style])')[1].innerHTML);
-        console.log('length ',document.querySelector('div._6lioXX').querySelector('div.items-center').querySelectorAll('div'));
-        const price = document.querySelector('div.pqTWkA').innerHTML;
+        await new Promise(async(resolve, reject) => {
+
+
+        console.log('promise');
+        const observer = new MutationObserver(async(mutationsList, observer) => {
+
+          console.log('mutationsList', mutationsList.length);
+          for (const mutation of mutationsList) {
+            if (mutation.type === 'childList' && mutation.target.innerText !== '') {
+              console.log('changed', mutation.target.innerText);
+              resolve();
+            }
+          }
+        });
+
+        observer.observe(document.querySelector('div.pqTWkA'), {childList: true});
+
+        await variationList[optionIndex][i].click();
+
+        setTimeout(() => {
+          resolve();
+        }, 5000);
+
+        }); 
+
+        const stock = document.querySelector('div._6lioXX').querySelector('div.items-center').querySelectorAll('div:not([style])')[1].innerText.split(' ')[1];
+        const price = document.querySelector('div.pqTWkA').innerText;
         const fullpriceElement = document.querySelector('div.Y3DvsN');
-        const fullprice = fullpriceElement ? fullpriceElement.innerHTML : -1;
+        const fullprice = fullpriceElement ? fullpriceElement.innerText : -1;
 
         data.push({
           'stock':stock,
           'price':price,
           'fullprice':fullprice
         })
+
+        if (variationList[optionIndex].length === 1){
+          await variationList[optionIndex][i].click();
+        }
+
       }
-      // console.log(data);
+      console.log(data);
       return data;
     };
     
 
     //price by option
     console.log('price by option');
-    // console.log('productVariations', productVariations.length);
-    // console.log('fefe', productVariations[0].length)
     let tempdata = [];
     if (productVariations.length > 0){
       console.log('data', productInfo);
@@ -381,11 +410,11 @@ async function getProductInfo(page){
 
     for (const info of infoCol){
       console.log('label')
-      const label = info.querySelector('label').innerHTML;
+      const label = info.querySelector('label').innerText;
 
       if (label === 'ยี่ห้อ'){
         const brand = info.querySelector('a');
-        productInfo['product_info'][label] = brand.innerHTML;
+        productInfo['product_info'][label] = brand.innerText;
         continue;
       }
       
@@ -411,7 +440,7 @@ async function getProductInfo(page){
         const categoryStr = [];
         for (category of categoryList){
           console.log('category')
-          categoryStr.push(category.innerHTML)
+          categoryStr.push(category.innerText)
         }
         productInfo['product_info'][label] = categoryStr.join('>');
         continue;
@@ -419,7 +448,7 @@ async function getProductInfo(page){
 
 
       console.log('data ' + label);
-      productInfo['product_info'][label] = data.innerHTML;
+      productInfo['product_info'][label] = data.innerText;
 
     
     }
@@ -452,7 +481,7 @@ const main = async () => {
     // );
 
     await page.goto(
-      "https://shopee.co.th/🌈ส่งฟรี🌈-มีดหั่นขนมปังสแตนเลส-มีให้เลือก-3รูปแบบ-4ขนาด-มีดตัดเค้ก-มีดตัดขนม-มีดตัดขนมปัง-มีดหั่นขนมปัง-มีดตัดเค้กสแตนเลส-i.380919622.8829555113?sp_atk=2d8bd65c-d348-4f35-8d2a-4f7c9965ebce&xptdk=2d8bd65c-d348-4f35-8d2a-4f7c9965ebce",
+      "https://shopee.co.th/พร้อมส่งhomeproth-ที่ลับมีด-หินลับมีดสัตว์น่ารัก-แท่นลับมีด-อุปกรณ์ลับของมีคม-ลับได้คมมาก-Knife-Sharpener-i.320775209.5690642775?sp_atk=10e94fa3-bb6e-4639-9609-167bad4b1fe8&xptdk=10e94fa3-bb6e-4639-9609-167bad4b1fe8",
       {
         waitUntil: "load",
       }
@@ -468,23 +497,25 @@ const main = async () => {
     await login(page);
     await wait(5000);
 
-    try{
-      const data = await getProductInfo(page);
-    }catch(err){
-      console.log(err);
-    }
+    // try{
+    //   const temp = await getProductInfo(page);
+    //   saveAsJson(JSON.stringify(temp, null, 2), 'product.json');
+    // }catch(err){
+    //   console.log(err);
+    // }
     // await data
       //     temp['product_address'] = shopeeHomeUrl + address;
       // temp['shop_address'] = shopeeHomeUrl + temp['shop_address'];
-      console.log(data);
-      return;
-          saveAsJson(JSON.stringify(temp, null, 2), 'product.json');
-      return;
+      // console.log(data);
+      // return;
+    //   return;
     const dataList = [];
     const seller = [];
     const brand = [];
     let count = 0;
-    for (address of linkedAddress){
+    // linkedAddress
+    let addresss = ['/พร้อมส่งhomeproth-ที่ลับมีด-หินลับมีดสัตว์น่ารัก-แท่นลับมีด-อุปกรณ์ลับของมีคม-ลับได้คมมาก-Knife-Sharpener-i.320775209.5690642775?sp_atk=10e94fa3-bb6e-4639-9609-167bad4b1fe8&xptdk=10e94fa3-bb6e-4639-9609-167bad4b1fe8']
+    for (address of addresss){
       count ++;
       console.log(count)
       await page.goto(shopeeHomeUrl + address,
@@ -493,11 +524,11 @@ const main = async () => {
       }
       );
       await wait(5000);
-      const temp = await getProductInfo(page);
+      let temp = await getProductInfo(page);
       while (!temp){
         await page.goto(shopeeHomeUrl + address, {waitUntil: "load",});
-        await wait(5000);
-        const temp = await getProductInfo(page);
+        temp = await getProductInfo(page);
+        await wait(500000);
       }
       temp['product_address'] = shopeeHomeUrl + address;
       temp['shop_address'] = shopeeHomeUrl + temp['shop_address'];
