@@ -332,7 +332,7 @@ async function getProductInfo(page, shopList={}, brandList={}){
 
     //favorite error
     const favoriteWapper = document.querySelector('button.IYjGwk').querySelector('div.Ne7dEf');
-    productInfo['favorite'] = favoriteWapper.innerText.split(' ')[1].slice(0, -1);
+    productInfo['favorite'] = favoriteWapper.innerText.split(' ')[1].slice(1, -1);
 
 
     console.log('options')
