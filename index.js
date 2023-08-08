@@ -5,10 +5,10 @@ const puppeteer = require("puppeteer");
 
 const email = "naputtalt2@gmail.com";
 const password = "6vU5eZT#edGL8X6";
-const waitPeriod_page = 5000;
-const waitPeriod_option = 5000;
+const waitPeriod_page = 1000;
+const waitPeriod_option = 1000;
 
-const firstPage = "https://shopee.co.th/search?keyword=%E0%B8%A1%E0%B8%B5%E0%B8%94&page=0&sortBy=sales"
+const firstPage = "https://shopee.co.th/search?is_from_login=true&keyword=postit&page=16"
 
 
 const products = [];
@@ -40,8 +40,10 @@ const main = async () => {
     //scrape product links
     while (true){
       linkList = linkList.concat(await getAllLinksInRow(page));
+      // let wi = checkForNextPage(page)
+      // console.log(wi)
 
-      if (checkForNextPage(page)) {
+      if (await checkForNextPage(page)) {
         console.log("wait for navigation");
         await Promise.all([
           page.waitForNavigation(),
@@ -61,7 +63,7 @@ const main = async () => {
     let brand = {};
     let count = 0;
     // linkedAddress
-    let addresss = ['/💥ส่งฟรี💥-มีดตัดเค้ก-มีดหั่นขนมปัง-Cookingrun-มีดตัดขนมปัง-ทีตัดเค้ก-มีดสไลด์-(มีให้เลือก-3แบบ)-i.784169.5756401089?sp_atk=5d947faf-65fd-4e72-8267-e5f8e4154354&xptdk=5d947faf-65fd-4e72-8267-e5f8e4154354']
+    let addresss = ['/%E0%B8%A1%E0%B8%B5%E0%B8%94%E0%B8%97%E0%B8%B3%E0%B8%84%E0%B8%A3%E0%B8%B1%E0%B8%A7-RHINO-BRAND-No.9101-MEAT-KNIFE-%E0%B8%AA%E0%B8%B3%E0%B8%AB%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%AD%E0%B8%9A%E0%B8%AD%E0%B8%B2%E0%B8%AB%E0%B8%B2%E0%B8%A3-%E0%B8%84%E0%B8%A1%E0%B8%AA%E0%B8%B8%E0%B8%94%E0%B9%86-(%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B9%81%E0%B8%97%E0%B9%89)-i.3253694.14651006029?sp_atk=bb0edf48-b362-4289-a705-a719826f9aee&xptdk=bb0edf48-b362-4289-a705-a719826f9aee']
     for (address of linkList){
       count ++;
       console.log(count)
@@ -92,7 +94,7 @@ const main = async () => {
     saveAsJson(JSON.stringify(seller, null, 2), 'seller.json');
     saveAsJson(JSON.stringify(brand, null, 2), 'brand.json');
 
-    await browser.close();
+    // await browser.close();
     return;
     await browser.close();
 
@@ -218,17 +220,21 @@ async function checkForNextPage(page){
   await page.waitForSelector("div.shopee-page-controller");
   return await page.evaluate(() => {
     const pagination = document.querySelector("div.shopee-page-controller");
-    const curPageNum = pagination.querySelector("button.shopee-button-solid").innerText;
+    const curPageNum = parseInt(pagination.querySelector("button.shopee-button-solid").innerText);
 
     const pageList = pagination.querySelectorAll(
       "button.shopee-button-no-outline"
     );
-
+    
+    console.log(pageList)
     for (const page of pageList) {
+      console.log(parseInt(page.innerText) + '>' +  curPageNum)
       if (page.innerText > curPageNum){
+        console.log('true')
         return true;
       }
     }
+    console.log('false')
     return false;
   });
 }
