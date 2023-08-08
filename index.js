@@ -205,10 +205,10 @@ async function checkForNextPage(page){
 
 /**
  * scrape product page
- * @param  {Number} page 
+ * @param  {page} page 
  * @return [product, seller, brand]
  */
-async function getProductInfo(page){
+async function getProductInfo(page, shopList={}, brandList={}){
   try {
     await page.waitForSelector("div._44qnta");
   }catch (err){
@@ -225,26 +225,34 @@ async function getProductInfo(page){
     throw new Error('div._44qnta not found: ' +  err);
   }
 
+  const data =  await page.evaluate(async() => {
+    const shopName = document.querySelector('div.VlDReK').innerText;
+    const shopInfos = document.querySelector('div.Po6c6I').querySelectorAll('div.R7Q8ES');
 
-  return await page.evaluate(async() => {
-    const productInfo = {};
-
-  // const bshopLogged = shopInfoList.hasOwnProperty(
-  //   document.querySelector("div.VlDReK")
-  // );
-
-
-    console.log('productNameWrapper')
-    const productNameWrapper = document.querySelector("div._44qnta");
+    shopData = {};
+    for (shopInfo of shopInfos){
+      shopData[shopInfo.querySelector('label.siK1qW').innerText] = shopInfo.querySelector('span.Xkm22X').innerText;
+    }
+    const shopAddress = document.querySelector('a.W0LQye');
+    shopData['address'] = "https://shopee.co.th" + shopAddress.getAttribute("href");
 
     console.log('shop type')
     //check if shoppe affiliate or recomended
+    const productNameWrapper = document.querySelector("div._44qnta");
     const shopType = productNameWrapper.querySelector("div.NOygQS");
     if (shopType){
-      productInfo["shop_type"] = shopType.innerText;
+      shopData["shop_type"] = shopType.innerText;
+    }else{
+      shopData["shop_type"] = '';
     }
-    productInfo['product_name'] = productNameWrapper.querySelector('span').innerText;
 
+    const productInfo = {};
+
+    //shop arress
+    productInfo['shop'] = shopName;
+
+    console.log('productNameWrapper')
+    productInfo['product_name'] = productNameWrapper.querySelector('span').innerText;
 
     console.log('score')
     const scoreWrapper = document.querySelector("div.X5u-5c");
@@ -281,6 +289,9 @@ async function getProductInfo(page){
     console.log('price')
     productInfo['price'] = document.querySelector('div.pqTWkA').innerText;
 
+    console.log('stock')
+    productInfo['stock'] = document.querySelector('div._6lioXX').querySelector('div.items-center').querySelectorAll('div:not([style])')[1].innerText.split(' ')[1];
+
 
     console.log('desc')
     //description
@@ -288,6 +299,11 @@ async function getProductInfo(page){
     if (desc){
       productInfo['desc'] = desc.innerText;
     }
+
+    //favorite error
+    const favoriteWapper = document.querySelector('button.IYjGwk').querySelector('div.Ne7dEf');
+    productInfo['favorite'] = favoriteWapper.innerText.split(' ')[1].slice(0, -1);
+
 
     console.log('options')
     // product opetion
@@ -401,7 +417,8 @@ async function getProductInfo(page){
     }
     productInfo['product_info_by_option'] = tempdata;
 
-    
+    let brandID = undefined;
+    let brandName = undefined;
     //product info
     console.log('info')
     const infoCol = document.querySelectorAll('div.dR8kXc');
@@ -414,7 +431,9 @@ async function getProductInfo(page){
 
       if (label === 'ยี่ห้อ'){
         const brand = info.querySelector('a');
-        productInfo['product_info'][label] = brand.innerText;
+        brandID = brand.getAttribute('href').split('=')[1];
+        brandName = brand.innerText;
+        productInfo['product_info'][label] = brandID;
         continue;
       }
       
@@ -453,18 +472,21 @@ async function getProductInfo(page){
     
     }
 
-    //shop arress
-    const temp = document.querySelector('a.W0LQye');
-
-    if (temp){
-      productInfo['shop_address'] = temp.getAttribute("href");
-    }else{
-      throw new Error('a.W0LQye is null')
-    }
-
-console.log("return data", productInfo);
-    return productInfo;
+    console.log("return data", productInfo);
+    return {'data':productInfo, 'brandName':brandName, 'brandID':brandID, 'shopData':shopData, 'shopName':shopName};
+    // [productInfo, {}, 
+    //   shopName, shopeData, brandList];
   });
+  if (data['brandID']){
+    brandList[data['brandID']] = data['brandName'];
+  }
+
+  if (data['shopName'])[
+    shopList[data['shopName']] = data['shopData']
+  ]
+
+  return {'data':data['data'], 'shopList':shopList, 'brandList':brandList};
+  
 }
 
 const main = async () => {
@@ -510,11 +532,11 @@ const main = async () => {
       // return;
     //   return;
     const dataList = [];
-    const seller = [];
-    const brand = [];
+    let seller = {};
+    let brand = {};
     let count = 0;
     // linkedAddress
-    let addresss = ['/พร้อมส่งhomeproth-ที่ลับมีด-หินลับมีดสัตว์น่ารัก-แท่นลับมีด-อุปกรณ์ลับของมีคม-ลับได้คมมาก-Knife-Sharpener-i.320775209.5690642775?sp_atk=10e94fa3-bb6e-4639-9609-167bad4b1fe8&xptdk=10e94fa3-bb6e-4639-9609-167bad4b1fe8']
+    let addresss = ['/💥ส่งฟรี💥-มีดตัดเค้ก-มีดหั่นขนมปัง-Cookingrun-มีดตัดขนมปัง-ทีตัดเค้ก-มีดสไลด์-(มีให้เลือก-3แบบ)-i.784169.5756401089?sp_atk=5d947faf-65fd-4e72-8267-e5f8e4154354&xptdk=5d947faf-65fd-4e72-8267-e5f8e4154354']
     for (address of addresss){
       count ++;
       console.log(count)
@@ -524,15 +546,17 @@ const main = async () => {
       }
       );
       await wait(5000);
-      let temp = await getProductInfo(page);
-      while (!temp){
+      let temp = await getProductInfo(page, seller, brand);
+      while (!temp['data']){
         await page.goto(shopeeHomeUrl + address, {waitUntil: "load",});
-        temp = await getProductInfo(page);
+        temp = await getProductInfo(page, {}, {});
         await wait(500000);
       }
-      temp['product_address'] = shopeeHomeUrl + address;
-      temp['shop_address'] = shopeeHomeUrl + temp['shop_address'];
-      dataList.push(temp);
+      temp['data']['product_address'] = shopeeHomeUrl + address;
+      dataList.push(temp['data']);
+
+      seller = temp['shopList'];
+      brand = temp['brandList'];
     }
 
 
@@ -540,6 +564,8 @@ const main = async () => {
     // const data = await getProductInfo(page);
     // await downloadCSV(page, linkList.join("\n"), "download.csv");
     saveAsJson(JSON.stringify(dataList, null, 2), 'product.json');
+    saveAsJson(JSON.stringify(seller, null, 2), 'seller.json');
+    saveAsJson(JSON.stringify(brand, null, 2), 'brand.json');
 
 
     return;
