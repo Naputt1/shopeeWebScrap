@@ -3,15 +3,16 @@ const crypto = require('crypto');
 const XLSX = require('xlsx');
 
 const puppeteer = require("puppeteer");
-
+//https://shopee.co.th/verify/captcha?anti_bot_tracking_id=91ad008a-de84-4973-a43e-bbc68d1ebfb0&app_key=Search.PC&client_id=1&next=https%3A%2F%2Fshopee.co.th%2Fverify%2Ftraffic&redirect_type=2&scene=crawler_item&should_replace_history=true
 
 const email = "naputtalt2@gmail.com";
 const password = "6vU5eZT#edGL8X6";
 const waitPeriod_page = 2000;
 const option_timeout = 5000;
 
-const firstPage = "https://shopee.co.th/search?is_from_login=true&keyword=postit&page=16"
+const firstPage = "https://shopee.co.th/search?is_from_login=true&keyword=postit&page=0"
 
+const XLSXfilename = 'example.xlsx';
 
 const shopeeHomeUrl = "https://shopee.co.th";
 
@@ -238,7 +239,7 @@ const main = async () => {
     saveAsJson(JSON.stringify(seller, null, 2), 'seller.json');
     saveAsJson(JSON.stringify(brand, null, 2), 'brand.json');
 
-    downloadXLSX(dataList, seller, brand, 'example.xlsx');
+    downloadXLSX(dataList, seller, brand, XLSXfilename);
 
     await browser.close();
     return;
