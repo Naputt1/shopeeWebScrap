@@ -8,14 +8,10 @@ const puppeteer = require("puppeteer");
 const email = "naputtalt2@gmail.com";
 const password = "6vU5eZT#edGL8X6";
 const waitPeriod_page = 1000;
-const waitPeriod_option = 1000;
+const option_timeout = 5000;
 
 const firstPage = "https://shopee.co.th/search?is_from_login=true&keyword=postit&page=16"
 
-
-const products = [];
-const brand = [];
-const seller = [];
 
 const shopeeHomeUrl = "https://shopee.co.th";
 
@@ -89,9 +85,7 @@ function downloadXLSX(data, shop, brand, filename){
     }
 
     const process_product_by_option = (info, infoIndex, name, optionStart, infoStart, newData) => {
-      // console.log('name ', name,);
-      // return;
-      
+
       let genData = [];
       console.log('i', info.length)
       for (let i = 0; i < info.length; i++) {
@@ -102,15 +96,10 @@ function downloadXLSX(data, shop, brand, filename){
 
 
         if (Array.isArray(info[i])){
-          // const temp = newData;
-          // // console.log(Object.values(name)[infoIndex][i], infoIndex, i)
-          // temp[optionStart] = Object.values(name)[infoIndex][i];
           genData = genData.concat(process_product_by_option(info[i], infoIndex + 1, name, optionStart + 1, infoStart, newGenData));
           continue;
         }
 
-        // const newGenData = newData;
-        // newGenData[optionStart] = Object.values(name)[infoIndex][i];
 
         for (let k = 0; k < 3; k++){
           newGenData[infoStart + k] = Object.values(info[i])[k];
@@ -118,30 +107,10 @@ function downloadXLSX(data, shop, brand, filename){
         console.log('newGenData', newGenData[optionStart]);
         genData.push(newGenData);
       }
-      // console.log('genData', genData);
       return genData;
     };
-    // for ()
-
-    console.log('infoList', infoList);
-    // console.log('infoList', infoList);
     
     fullInfoList = fullInfoList.concat(process_product_by_option(product['product_info_by_option'], 0, product['product_options'], 17, 12, infoList));
-// return;
-    // for (const key in product){
-    //   if (infoList.length === 10){
-
-    //     if (product['product_info'].hasOwnProperty('ยี่ห้อ')){
-    //       infoList.push(product['product_info']['ยี่ห้อ']);
-    //     }else{
-    //       infoList.push('');
-    //     }
-    //     continue;
-    //   } else if(infoList.length === 12 || infoList.length === 13){
-    //     infoList.push('');
-    //   }
-    //   infoList.push(product[key]);
-    // }
   });
 
   const productSheet = dataSheet.concat(fullInfoList);
@@ -198,7 +167,9 @@ function downloadXLSX(data, shop, brand, filename){
 
 const main = async () => {
   try {
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch({ 
+      // headless: false 
+    });
     const page = await browser.newPage();
 
     await page.goto(
@@ -216,8 +187,6 @@ const main = async () => {
     //scrape product links
     while (true){
       linkList = linkList.concat(await getAllLinksInRow(page));
-      // let wi = checkForNextPage(page)
-      // console.log(wi)
 
       if (await checkForNextPage(page)) {
         console.log("wait for navigation");
@@ -271,7 +240,7 @@ const main = async () => {
 
     downloadXLSX(dataList, seller, brand, 'example.xlsx');
 
-    // await browser.close();
+    await browser.close();
     return;
     await browser.close();
 
@@ -438,7 +407,7 @@ async function getProductInfo(page, shopList={}, brandList={}){
     throw new Error('div._44qnta not found: ' +  err);
   }
 
-  const data =  await page.evaluate(async() => {
+  const data =  await page.evaluate(async(option_timeout) => {
     const curURL = window.location.href;
     const shopID = curURL.match(/i\.(\d+)\.\d+/)[1];
     const productID = curURL.match(/\.(\d+)\?sp_atk/)[1];
@@ -601,7 +570,7 @@ async function getProductInfo(page, shopList={}, brandList={}){
 
         setTimeout(() => {
           resolve();
-        }, 5000);
+        }, option_timeout);
 
         }); 
 
@@ -696,7 +665,7 @@ async function getProductInfo(page, shopList={}, brandList={}){
     return {'data':productInfo, 'brandName':brandName, 'brandID':brandID, 'shopData':shopData, 'shopID':shopID};
     // [productInfo, {}, 
     //   shopName, shopeData, brandList];
-  });
+  }, option_timeout);
   console.log('brand', data['brandID'])
   if (data['brandID']){
     brandList[data['brandID']] = data['brandName'];
