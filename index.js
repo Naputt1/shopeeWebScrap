@@ -185,21 +185,21 @@ const main = async () => {
 
 
     //scrape product links
-    // while (true){
-    //   linkList = linkList.concat(await getAllLinksInRow(page));
+    while (true){
+      linkList = linkList.concat(await getAllLinksInRow(page));
 
-    //   if (await checkForNextPage(page)) {
-    //     console.log("wait for navigation");
-    //     await Promise.all([
-    //       page.waitForNavigation(),
-    //       page.click("button.shopee-icon-button--right"),
-    //     ]);
-    //     console.log("finished navigation");
-    //     await wait(waitPeriod_page);
-    //     continue;
-    //   }
-    //   break;
-    // } 
+      if (await checkForNextPage(page)) {
+        console.log("wait for navigation");
+        await Promise.all([
+          page.waitForNavigation(),
+          page.click("button.shopee-icon-button--right"),
+        ]);
+        console.log("finished navigation");
+        await wait(waitPeriod_page);
+        continue;
+      }
+      break;
+    } 
 
 
     //scrape data
@@ -207,9 +207,9 @@ const main = async () => {
     let seller = {};
     let brand = {};
     let count = 0;
-    // linkedAddress
+    // linkList
     let addresss = ['/🔥ส่งฟรี🔥-มีดตัดเค้ก-สแตนเลสแท้-WANNA-มีให้เลือก-3-รูปแบบ-3-ขนาด-มีดหั่นเค้ก-มีดหั่นขนมปัง-มีดตัดเค้ก-มีดตัดขนมเค้ก-i.283431996.4960495896?sp_atk=7b77e0d0-6027-4c51-878b-f20abf691f4f&xptdk=7b77e0d0-6027-4c51-878b-f20abf691f4f']
-    for (address of addresss){
+    for (address of linkList){
       count ++;
       console.log(count)
       await page.goto(shopeeHomeUrl + address,
@@ -490,8 +490,13 @@ async function getProductInfo(page, shopList={}, brandList={}){
     }
 
     //favorite error
+    console.log('favirite')
     const favoriteWapper = document.querySelector('button.IYjGwk').querySelector('div.Ne7dEf');
-    productInfo['favorite'] = favoriteWapper.innerText.split(' ')[1].slice(1, -1);
+    if (favoriteWapper){
+      productInfo['favorite'] = favoriteWapper.innerText.split(' ')[1].slice(1, -1);
+    }else{
+      productInfo['favorite'] = '0';
+    }
 
 
     console.log('options')
