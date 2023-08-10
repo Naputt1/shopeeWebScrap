@@ -168,7 +168,7 @@ function downloadXLSX(data, shop, brand, filename){
 const main = async () => {
   try {
     const browser = await puppeteer.launch({ 
-      // headless: false 
+      headless: false 
     });
     const page = await browser.newPage();
 
@@ -209,7 +209,7 @@ const main = async () => {
     let count = 0;
     // linkedAddress
     let addresss = ['/🔥ส่งฟรี🔥-มีดตัดเค้ก-สแตนเลสแท้-WANNA-มีให้เลือก-3-รูปแบบ-3-ขนาด-มีดหั่นเค้ก-มีดหั่นขนมปัง-มีดตัดเค้ก-มีดตัดขนมเค้ก-i.283431996.4960495896?sp_atk=7b77e0d0-6027-4c51-878b-f20abf691f4f&xptdk=7b77e0d0-6027-4c51-878b-f20abf691f4f']
-    for (address of linkList){
+    for (address of addresss){
       count ++;
       console.log(count)
       await page.goto(shopeeHomeUrl + address,
