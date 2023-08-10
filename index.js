@@ -1,4 +1,6 @@
 const fs = require("fs");
+const crypto = require('crypto');
+const XLSX = require('xlsx');
 
 const puppeteer = require("puppeteer");
 
@@ -19,6 +21,180 @@ const shopeeHomeUrl = "https://shopee.co.th";
 
 let linkList = [];
 
+function downloadXLSX(data, shop, brand, filename){
+  // Create a new workbook
+  const workbook = XLSX.utils.book_new();
+
+  // const dataSheet = [[
+  //   'ID',
+  //   'shop_id',
+  //   'product_name',
+  //   'productScore',
+  //   'rating',
+  //   'sold',
+  //   'full_price',
+  //   'price',
+  //   'stock',
+  //   'desc',
+  //   'favorite',
+  //   'product_options',
+  //   'product_info_by_option',
+  //   'product_info',
+  //   'product_address',
+  // ]];
+
+    const dataSheet = [[
+    'ID',
+    'shop_id',
+    'product_name',
+    'productScore',
+    'rating',
+    'sold',
+    'full_price',
+    'price',
+    'stock',
+    'desc',
+    'brand',
+    'favorite',
+    'option stock', //12
+    'option price',
+    'option fullprice', 
+    'product_info',
+    'product_address',
+    'product_options 1', // 17
+    'product_options 2', 
+  ]];
+
+  let fullInfoList = [];
+
+  data.forEach(product => {
+    const infoList = [];
+    for (let i = 0; i < dataSheet[0].length; i++){
+      if (dataSheet[0][i] === 'brand'){
+        if (product['product_info'].hasOwnProperty('ยี่ห้อ')){
+          infoList.push(product['product_info']['ยี่ห้อ']);
+          delete product['product_info']['ยี่ห้อ'];
+        }else{
+          infoList.push('');
+        }
+        continue;
+      }else if (['product_options 1', 'product_options 2', 'option stock', 'option price','option fullprice',].includes(dataSheet[0][i])){
+        infoList.push('');
+        continue;
+      }else if (dataSheet[0][i] === 'product_info'){
+        infoList.push(JSON.stringify(product['product_info'], null, 2));
+        continue;
+      }
+      infoList.push(product[dataSheet[0][i]]);
+    }
+
+    const process_product_by_option = (info, infoIndex, name, optionStart, infoStart, newData) => {
+      // console.log('name ', name,);
+      // return;
+      
+      let genData = [];
+      console.log('i', info.length)
+      for (let i = 0; i < info.length; i++) {
+        const newGenData = newData.slice();
+        console.log(newGenData);
+        console.log('name', Object.values(name)[infoIndex][i], infoIndex, i);
+        newGenData[optionStart] = Object.values(name)[infoIndex][i];
+
+
+        if (Array.isArray(info[i])){
+          // const temp = newData;
+          // // console.log(Object.values(name)[infoIndex][i], infoIndex, i)
+          // temp[optionStart] = Object.values(name)[infoIndex][i];
+          genData = genData.concat(process_product_by_option(info[i], infoIndex + 1, name, optionStart + 1, infoStart, newGenData));
+          continue;
+        }
+
+        // const newGenData = newData;
+        // newGenData[optionStart] = Object.values(name)[infoIndex][i];
+
+        for (let k = 0; k < 3; k++){
+          newGenData[infoStart + k] = Object.values(info[i])[k];
+        }
+        console.log('newGenData', newGenData[optionStart]);
+        genData.push(newGenData);
+      }
+      // console.log('genData', genData);
+      return genData;
+    };
+    // for ()
+
+    console.log('infoList', infoList);
+    // console.log('infoList', infoList);
+    
+    fullInfoList = fullInfoList.concat(process_product_by_option(product['product_info_by_option'], 0, product['product_options'], 17, 12, infoList));
+// return;
+    // for (const key in product){
+    //   if (infoList.length === 10){
+
+    //     if (product['product_info'].hasOwnProperty('ยี่ห้อ')){
+    //       infoList.push(product['product_info']['ยี่ห้อ']);
+    //     }else{
+    //       infoList.push('');
+    //     }
+    //     continue;
+    //   } else if(infoList.length === 12 || infoList.length === 13){
+    //     infoList.push('');
+    //   }
+    //   infoList.push(product[key]);
+    // }
+  });
+
+  const productSheet = dataSheet.concat(fullInfoList);
+  
+  const shopSheet = [[
+    'ID',
+    'name',
+    'คะแนน',
+    'อัตราการตอบกลับ',
+    'เข้าร่วมเมื่อ',
+    'เวลาในการตอบกลับ',
+    'ผู้ติดตาม',
+    'address',
+    'shop_type',
+  ]];
+  const ShopIDs = Object.keys(shop);
+  for (let i = 0; i < ShopIDs.length; i++) {
+    shopSheet.push([ShopIDs[i]]);
+
+    const shopInfos = Object.values(shop[ShopIDs[i]]);
+    
+    for (let j = 0; j < shopInfos.length ; j++) {
+      shopSheet[i + 1].push(shopInfos[j]);
+    }
+  }
+
+
+  const brandSheet = [[
+    'ID',
+    'name',
+  ]];
+
+  const brandIds = Object.keys(brand)
+  for (let i = 0; i < brandIds.length; i++) {
+    brandSheet.push([brandIds[i], brand[brandIds[i]]]);
+  }
+
+
+  // Create worksheets
+  const ws1 = XLSX.utils.aoa_to_sheet(productSheet);
+  const ws2 = XLSX.utils.aoa_to_sheet(shopSheet);
+  const ws3 = XLSX.utils.aoa_to_sheet(brandSheet);
+
+  // Add worksheets to the workbook
+  XLSX.utils.book_append_sheet(workbook, ws1, 'product');
+  XLSX.utils.book_append_sheet(workbook, ws2, 'shop');
+  XLSX.utils.book_append_sheet(workbook, ws3, 'brand');
+
+  // Generate Excel file 
+  const excelFilePath = filename;
+  XLSX.writeFile(workbook, excelFilePath);
+}
+
 
 const main = async () => {
   try {
@@ -37,24 +213,24 @@ const main = async () => {
     await wait(waitPeriod_page);
 
 
-    // //scrape product links
-    // while (true){
-    //   linkList = linkList.concat(await getAllLinksInRow(page));
-    //   // let wi = checkForNextPage(page)
-    //   // console.log(wi)
+    //scrape product links
+    while (true){
+      linkList = linkList.concat(await getAllLinksInRow(page));
+      // let wi = checkForNextPage(page)
+      // console.log(wi)
 
-    //   if (await checkForNextPage(page)) {
-    //     console.log("wait for navigation");
-    //     await Promise.all([
-    //       page.waitForNavigation(),
-    //       page.click("button.shopee-icon-button--right"),
-    //     ]);
-    //     console.log("finished navigation");
-    //     await wait(waitPeriod_page);
-    //     continue;
-    //   }
-    //   break;
-    // } 
+      if (await checkForNextPage(page)) {
+        console.log("wait for navigation");
+        await Promise.all([
+          page.waitForNavigation(),
+          page.click("button.shopee-icon-button--right"),
+        ]);
+        console.log("finished navigation");
+        await wait(waitPeriod_page);
+        continue;
+      }
+      break;
+    } 
 
 
     //scrape data
@@ -63,8 +239,8 @@ const main = async () => {
     let brand = {};
     let count = 0;
     // linkedAddress
-    let addresss = ['/%E0%B8%A1%E0%B8%B5%E0%B8%94%E0%B8%97%E0%B8%B3%E0%B8%84%E0%B8%A3%E0%B8%B1%E0%B8%A7-RHINO-BRAND-No.9101-MEAT-KNIFE-%E0%B8%AA%E0%B8%B3%E0%B8%AB%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%AD%E0%B8%9A%E0%B8%AD%E0%B8%B2%E0%B8%AB%E0%B8%B2%E0%B8%A3-%E0%B8%84%E0%B8%A1%E0%B8%AA%E0%B8%B8%E0%B8%94%E0%B9%86-(%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B9%81%E0%B8%97%E0%B9%89)-i.3253694.14651006029?sp_atk=bb0edf48-b362-4289-a705-a719826f9aee&xptdk=bb0edf48-b362-4289-a705-a719826f9aee']
-    for (address of addresss){
+    let addresss = ['/🔥ส่งฟรี🔥-มีดตัดเค้ก-สแตนเลสแท้-WANNA-มีให้เลือก-3-รูปแบบ-3-ขนาด-มีดหั่นเค้ก-มีดหั่นขนมปัง-มีดตัดเค้ก-มีดตัดขนมเค้ก-i.283431996.4960495896?sp_atk=7b77e0d0-6027-4c51-878b-f20abf691f4f&xptdk=7b77e0d0-6027-4c51-878b-f20abf691f4f']
+    for (address of linkList){
       count ++;
       console.log(count)
       await page.goto(shopeeHomeUrl + address,
@@ -87,12 +263,13 @@ const main = async () => {
     }
 
 
-
     // const data = await getProductInfo(page);
     // await downloadCSV(page, linkList.join("\n"), "download.csv");
     saveAsJson(JSON.stringify(dataList, null, 2), 'product.json');
     saveAsJson(JSON.stringify(seller, null, 2), 'seller.json');
     saveAsJson(JSON.stringify(brand, null, 2), 'brand.json');
+
+    downloadXLSX(dataList, seller, brand, 'example.xlsx');
 
     // await browser.close();
     return;
@@ -520,6 +697,7 @@ async function getProductInfo(page, shopList={}, brandList={}){
     // [productInfo, {}, 
     //   shopName, shopeData, brandList];
   });
+  console.log('brand', data['brandID'])
   if (data['brandID']){
     brandList[data['brandID']] = data['brandName'];
   }
@@ -529,6 +707,7 @@ async function getProductInfo(page, shopList={}, brandList={}){
     console.log(data['shopData']);
   }
 
+  console.log(data)
   return {'data':data['data'], 'shopList':shopList, 'brandList':brandList};
   
 }
