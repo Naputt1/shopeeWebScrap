@@ -7,7 +7,7 @@ const puppeteer = require("puppeteer");
 
 const email = "naputtalt2@gmail.com";
 const password = "6vU5eZT#edGL8X6";
-const waitPeriod_page = 1000;
+const waitPeriod_page = 2000;
 const option_timeout = 5000;
 
 const firstPage = "https://shopee.co.th/search?is_from_login=true&keyword=postit&page=16"
@@ -185,21 +185,21 @@ const main = async () => {
 
 
     //scrape product links
-    while (true){
-      linkList = linkList.concat(await getAllLinksInRow(page));
+    // while (true){
+    //   linkList = linkList.concat(await getAllLinksInRow(page));
 
-      if (await checkForNextPage(page)) {
-        console.log("wait for navigation");
-        await Promise.all([
-          page.waitForNavigation(),
-          page.click("button.shopee-icon-button--right"),
-        ]);
-        console.log("finished navigation");
-        await wait(waitPeriod_page);
-        continue;
-      }
-      break;
-    } 
+    //   if (await checkForNextPage(page)) {
+    //     console.log("wait for navigation");
+    //     await Promise.all([
+    //       page.waitForNavigation(),
+    //       page.click("button.shopee-icon-button--right"),
+    //     ]);
+    //     console.log("finished navigation");
+    //     await wait(waitPeriod_page);
+    //     continue;
+    //   }
+    //   break;
+    // } 
 
 
     //scrape data
