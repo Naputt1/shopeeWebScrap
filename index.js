@@ -10,6 +10,8 @@ const password = "6vU5eZT#edGL8X6";
 const waitPeriod_page = 2000;
 const option_timeout = 5000;
 
+const pagelimit = 10;
+
 const firstPage = "https://shopee.co.th/search?is_from_login=true&keyword=postit&page=0"
 
 const XLSXfilename = 'example.xlsx';
@@ -184,12 +186,13 @@ const main = async () => {
     await login(page);
     await wait(waitPeriod_page);
 
-
+    let pageCount = 0;
     //scrape product links
     while (true){
+      pageCount++;
       linkList = linkList.concat(await getAllLinksInRow(page));
 
-      if (await checkForNextPage(page)) {
+      if (await checkForNextPage(page) && pageCount <= pagelimit) {
         console.log("wait for navigation");
         await Promise.all([
           page.waitForNavigation(),
