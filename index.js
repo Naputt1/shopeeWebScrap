@@ -8,7 +8,7 @@ const puppeteer = require("puppeteer");
 const email = "naputtalt2@gmail.com";
 const password = "6vU5eZT#edGL8X6";
 const waitPeriod_page = 2000;
-const option_timeout = 5000;
+const option_timeout = 100;
 
 const pagelimit = 10;
 
@@ -181,6 +181,10 @@ const main = async () => {
         waitUntil: "load",
       }
     );
+//             await page.waitForNavigation();
+// console.log('page loaded');
+//             await page.waitForNavigation({timeout:5000});
+//         console.log('page loaded');
 
 
     await login(page);
@@ -188,22 +192,22 @@ const main = async () => {
 
     let pageCount = 0;
     //scrape product links
-    // while (true){
-    //   pageCount++;
-    //   linkList = linkList.concat(await getAllLinksInRow(page));
+    while (true){
+      pageCount++;
+      linkList = linkList.concat(await getAllLinksInRow(page));
 
-    //   if (await checkForNextPage(page) && pageCount <= pagelimit) {
-    //     console.log("wait for navigation");
-    //     await Promise.all([
-    //       page.waitForNavigation(),
-    //       page.click("button.shopee-icon-button--right"),
-    //     ]);
-    //     console.log("finished navigation");
-    //     await wait(waitPeriod_page);
-    //     continue;
-    //   }
-    //   break;
-    // } 
+      if (await checkForNextPage(page) && pageCount <= pagelimit) {
+        console.log("wait for navigation");
+        await Promise.all([
+          page.waitForNavigation(),
+          page.click("button.shopee-icon-button--right"),
+        ]);
+        console.log("finished navigation");
+        await wait(waitPeriod_page);
+        continue;
+      }
+      break;
+    } 
 
 
     //scrape data
@@ -213,16 +217,55 @@ const main = async () => {
     let count = 0;
     // linkList
     let addresss = ['/🔥ส่งฟรี🔥-มีดตัดเค้ก-สแตนเลสแท้-WANNA-มีให้เลือก-3-รูปแบบ-3-ขนาด-มีดหั่นเค้ก-มีดหั่นขนมปัง-มีดตัดเค้ก-มีดตัดขนมเค้ก-i.283431996.4960495896?sp_atk=7b77e0d0-6027-4c51-878b-f20abf691f4f&xptdk=7b77e0d0-6027-4c51-878b-f20abf691f4f']
-    for (address of addresss){
+    for (address of linkList){
       count ++;
       console.log(count)
-      await page.goto(shopeeHomeUrl + address,
-      {
-        waitUntil: "load",
+      while (true){
+        await page.goto(shopeeHomeUrl + address,
+        {
+          waitUntil: "domcontentloaded",
+        }
+        );
+        // console.log(page.url())
+        console.log('page loaded');
+        try{
+          await page.waitForSelector('div._2V2E5Q', { timeout: 5000 });
+          const capcha = await page.$('._2V2E5Q');
+          if (capcha){
+            console.log("yes capcha")
+            continue;
+          }
+        }catch(err){
+          console.log('no capcha')
+        }
+        break;
       }
-      );
-      await wait(waitPeriod_page);
+
+      // await wait(waitPeriod_page);
       let temp = await getProductInfo(page, seller, brand);
+      if (!temp){
+        while (true){
+          await page.goto(shopeeHomeUrl + address,
+          {
+            waitUntil: "domcontentloaded",
+          }
+          );
+          // console.log(page.url())
+          console.log('page loaded');
+          try{
+            await page.waitForSelector('div._2V2E5Q', { timeout: 5000 });
+            const capcha = await page.$('._2V2E5Q');
+            if (capcha){
+              console.log("yes capcha")
+              continue;
+            }
+          }catch(err){
+            console.log('no capcha')
+          }
+          break;
+        }
+        temp = await getProductInfo(page, seller, brand);
+      }
       while (!temp['data']){
         await page.goto(shopeeHomeUrl + address, {waitUntil: "load",});
         temp = await getProductInfo(page, {}, {});
@@ -398,20 +441,29 @@ async function getProductInfo(page, shopList={}, brandList={}){
   try {
     await page.waitForSelector("div._44qnta");
   }catch (err){
-    const bPageNotFound = await page.evaluate(() => {
+    const status = await page.evaluate(() => {
       const PageNotFound = document.querySelector('div.product-not-exist__content');
+      const capcha = document.querySelector('div._2V2E5Q');
       if (PageNotFound){
-        return false;
+        return [true, false];
       }
-      return true;
+      if (capcha){
+        return [false, true];
+      }
+      return [false, false];
     })
-    if (!bPageNotFound){
-      return false;
+    if (status[0]){
+      console.log('page not found');
+
+    }else if (status[1]){
+      console.log('capcha page')
     }
+    return false;
     throw new Error('div._44qnta not found: ' +  err);
   }
-
-  const JsonData =  await page.evaluate(async(option_timeout) => {
+  let JsonData = "";
+  try{
+  JsonData =  await page.evaluate(async(option_timeout) => {
     const curURL = window.location.href;
     const shopID = curURL.match(/i\.(\d+)\.\d+/)[1];
     const productID = curURL.match(/\.(\d+)\?sp_atk/)[1];
@@ -669,12 +721,17 @@ async function getProductInfo(page, shopList={}, brandList={}){
 
     
     }
+    
 
     console.log("return data", productInfo);
     return JSON.stringify({'data':productInfo, 'brandName':brandName, 'brandID':brandID, 'shopData':shopData, 'shopID':shopID}, null, 0);
     // [productInfo, {}, 
     //   shopName, shopeData, brandList];
   }, option_timeout);
+  }catch(err){
+    console.log('evaluate error: ' + err);
+    return false;
+  }
 
   const data = JSON.parse(JsonData);
   console.log('json data', JsonData)
