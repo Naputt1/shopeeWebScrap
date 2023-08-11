@@ -188,22 +188,22 @@ const main = async () => {
 
     let pageCount = 0;
     //scrape product links
-    while (true){
-      pageCount++;
-      linkList = linkList.concat(await getAllLinksInRow(page));
+    // while (true){
+    //   pageCount++;
+    //   linkList = linkList.concat(await getAllLinksInRow(page));
 
-      if (await checkForNextPage(page) && pageCount <= pagelimit) {
-        console.log("wait for navigation");
-        await Promise.all([
-          page.waitForNavigation(),
-          page.click("button.shopee-icon-button--right"),
-        ]);
-        console.log("finished navigation");
-        await wait(waitPeriod_page);
-        continue;
-      }
-      break;
-    } 
+    //   if (await checkForNextPage(page) && pageCount <= pagelimit) {
+    //     console.log("wait for navigation");
+    //     await Promise.all([
+    //       page.waitForNavigation(),
+    //       page.click("button.shopee-icon-button--right"),
+    //     ]);
+    //     console.log("finished navigation");
+    //     await wait(waitPeriod_page);
+    //     continue;
+    //   }
+    //   break;
+    // } 
 
 
     //scrape data
@@ -213,7 +213,7 @@ const main = async () => {
     let count = 0;
     // linkList
     let addresss = ['/🔥ส่งฟรี🔥-มีดตัดเค้ก-สแตนเลสแท้-WANNA-มีให้เลือก-3-รูปแบบ-3-ขนาด-มีดหั่นเค้ก-มีดหั่นขนมปัง-มีดตัดเค้ก-มีดตัดขนมเค้ก-i.283431996.4960495896?sp_atk=7b77e0d0-6027-4c51-878b-f20abf691f4f&xptdk=7b77e0d0-6027-4c51-878b-f20abf691f4f']
-    for (address of linkList){
+    for (address of addresss){
       count ++;
       console.log(count)
       await page.goto(shopeeHomeUrl + address,
@@ -411,7 +411,7 @@ async function getProductInfo(page, shopList={}, brandList={}){
     throw new Error('div._44qnta not found: ' +  err);
   }
 
-  const data =  await page.evaluate(async(option_timeout) => {
+  const JsonData =  await page.evaluate(async(option_timeout) => {
     const curURL = window.location.href;
     const shopID = curURL.match(/i\.(\d+)\.\d+/)[1];
     const productID = curURL.match(/\.(\d+)\?sp_atk/)[1];
@@ -671,10 +671,13 @@ async function getProductInfo(page, shopList={}, brandList={}){
     }
 
     console.log("return data", productInfo);
-    return {'data':productInfo, 'brandName':brandName, 'brandID':brandID, 'shopData':shopData, 'shopID':shopID};
+    return JSON.stringify({'data':productInfo, 'brandName':brandName, 'brandID':brandID, 'shopData':shopData, 'shopID':shopID}, null, 0);
     // [productInfo, {}, 
     //   shopName, shopeData, brandList];
   }, option_timeout);
+
+  const data = JSON.parse(JsonData);
+  console.log('json data', JsonData)
   console.log('brand', data['brandID'])
   if (data['brandID']){
     brandList[data['brandID']] = data['brandName'];
