@@ -3,12 +3,17 @@ const crypto = require('crypto');
 const XLSX = require('xlsx');
 
 const puppeteer = require("puppeteer");
+const { resolve } = require("path");
 //https://shopee.co.th/verify/captcha?anti_bot_tracking_id=91ad008a-de84-4973-a43e-bbc68d1ebfb0&app_key=Search.PC&client_id=1&next=https%3A%2F%2Fshopee.co.th%2Fverify%2Ftraffic&redirect_type=2&scene=crawler_item&should_replace_history=true
 
 const email = "naputtalt2@gmail.com";
 const password = "6vU5eZT#edGL8X6";
+const credFilename = "shopeeCreds.json";
 const waitPeriod_page = 2000;
 const option_timeout = 100;
+const capcha_waitPeriod = 120000;
+
+let loginIndex = 0;
 
 const pagelimit = 10;
 
@@ -18,7 +23,12 @@ const XLSXfilename = 'example.xlsx';
 
 const shopeeHomeUrl = "https://shopee.co.th";
 
+var browser;
+var page;
+
 let linkList = [];
+let bCapcha = false;
+let bLogin = false;
 
 function downloadXLSX(data, shop, brand, filename){
   // Create a new workbook
@@ -170,10 +180,10 @@ function downloadXLSX(data, shop, brand, filename){
 
 const main = async () => {
   try {
-    const browser = await puppeteer.launch({ 
+    browser = await puppeteer.launch({ 
       headless: false 
     });
-    const page = await browser.newPage();
+    page = await browser.newPage();
 
     await page.goto(
       firstPage,
@@ -181,11 +191,6 @@ const main = async () => {
         waitUntil: "load",
       }
     );
-//             await page.waitForNavigation();
-// console.log('page loaded');
-//             await page.waitForNavigation({timeout:5000});
-//         console.log('page loaded');
-
 
     await login(page);
     await wait(waitPeriod_page);
@@ -231,12 +236,28 @@ const main = async () => {
         try{
           await page.waitForSelector('div._2V2E5Q', { timeout: 5000 });
           const capcha = await page.$('._2V2E5Q');
-          if (capcha){
+          if (capcha || bCapcha){
             console.log("yes capcha")
+            await wait(capcha_waitPeriod);
+            bCapcha = false;
+            await page.close();
+            browser.close();
+            browser = await puppeteer.launch({ 
+              headless: false 
+            });
+            page = await browser.newPage();
+            bLogin = true;
+            // await wait(capcha_waitPeriod);
             continue;
           }
         }catch(err){
           console.log('no capcha')
+        }
+
+        if (bLogin){
+          console.log('login')
+          await login(page);
+          bLogin = false;
         }
         break;
       }
@@ -255,12 +276,28 @@ const main = async () => {
           try{
             await page.waitForSelector('div._2V2E5Q', { timeout: 5000 });
             const capcha = await page.$('._2V2E5Q');
-            if (capcha){
+            if (capcha || bCapcha){
               console.log("yes capcha")
+              await wait(capcha_waitPeriod);
+              bCapcha = false;
+              await page.close();
+              browser.close();
+              browser = await puppeteer.launch({ 
+                headless: false 
+              });
+              page = await browser.newPage();
+              bLogin = true;
+              // await wait(capcha_waitPeriod);
               continue;
             }
           }catch(err){
             console.log('no capcha')
+          }
+
+          if (bLogin){
+            console.log('login')
+            await login(page);
+            bLogin = false;
           }
           break;
         }
@@ -329,6 +366,17 @@ async function saveAsJson(data, filename) {
   });
 }
 
+async function readJsonFile() {
+  try {
+    const data = await fs.promises.readFile(credFilename, 'utf8');
+    const jsonData = JSON.parse(data);
+    return jsonData;
+  } catch (error) {
+    console.error('Error reading JSON file:', error);
+    throw error; 
+  }
+}
+
 async function login(page) {
   //wait for page to redirect to login page for some reason?
   await page.waitForSelector('[name="loginKey"]');
@@ -336,10 +384,15 @@ async function login(page) {
   //remove the select lang some how interfere with typing?
   await page.waitForSelector(".shopee-button-outline--primary-reverse");
   await page.click(".shopee-button-outline--primary-reverse");
-  await page.type('[name="loginKey"]', email);
-  await page.type('[name="password"]', password);
-
+  const creds = await readJsonFile();
+  if (loginIndex >= creds.length){
+    loginIndex = 0;
+  }
+  await page.type('[name="loginKey"]', creds[loginIndex]["username"]);
+  await page.type('[name="password"]', creds[loginIndex]["password"]);
   await page.waitForSelector("button._1EApiB");
+
+  loginIndex++;
 
   await page.evaluate(async () => {
     console.log("loaded");
@@ -457,6 +510,7 @@ async function getProductInfo(page, shopList={}, brandList={}){
 
     }else if (status[1]){
       console.log('capcha page')
+      bCapcha = true;
     }
     return false;
     throw new Error('div._44qnta not found: ' +  err);
