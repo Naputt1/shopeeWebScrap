@@ -1,9 +1,8 @@
 const fs = require("fs");
-const crypto = require('crypto');
 const XLSX = require('xlsx');
 
 const puppeteer = require("puppeteer");
-const { resolve } = require("path");
+
 //https://shopee.co.th/verify/captcha?anti_bot_tracking_id=91ad008a-de84-4973-a43e-bbc68d1ebfb0&app_key=Search.PC&client_id=1&next=https%3A%2F%2Fshopee.co.th%2Fverify%2Ftraffic&redirect_type=2&scene=crawler_item&should_replace_history=true
 
 const email = "naputtalt2@gmail.com";
@@ -15,9 +14,9 @@ const capcha_waitPeriod = 120000;
 
 let loginIndex = 0;
 
-const pagelimit = 10;
+const pagelimit = 20;
 
-const firstPage = "https://shopee.co.th/search?is_from_login=true&keyword=postit&page=0"
+const firstPage = "https://shopee.co.th/search?keyword=%E0%B8%A1%E0%B8%B5%E0%B8%94%E0%B8%97%E0%B8%B3%E0%B8%84%E0%B8%A3%E0%B8%B1%E0%B8%A7&trackingId=searchhint-1691665546-db56ec97-376d-11ee-9967-2cea7fabf3af"
 
 const XLSXfilename = 'example.xlsx';
 
@@ -33,24 +32,6 @@ let bLogin = false;
 function downloadXLSX(data, shop, brand, filename){
   // Create a new workbook
   const workbook = XLSX.utils.book_new();
-
-  // const dataSheet = [[
-  //   'ID',
-  //   'shop_id',
-  //   'product_name',
-  //   'productScore',
-  //   'rating',
-  //   'sold',
-  //   'full_price',
-  //   'price',
-  //   'stock',
-  //   'desc',
-  //   'favorite',
-  //   'product_options',
-  //   'product_info_by_option',
-  //   'product_info',
-  //   'product_address',
-  // ]];
 
     const dataSheet = [[
     'ID',
@@ -326,13 +307,6 @@ const main = async () => {
 
     await browser.close();
     return;
-    await browser.close();
-
-
-    await page.screenshot({ path: "example.png" });
-
-    await browser.close();
-    console.log("Screenshot created successfully!");
   } catch (err) {
     console.error("Error occurred:", err);
   }
@@ -344,17 +318,6 @@ function wait(delay) {
   });
 }
 
-async function downloadCSV(file, filename) {
- const csvContent = file;
-
- fs.writeFile(filename, csvContent, "utf8", (err) => {
-   if (err) {
-     console.error("Error writing to CSV file:", err);
-   } else {
-     console.log("Data has been written to", filename);
-   }
- });
-}
 
 async function saveAsJson(data, filename) {
   fs.writeFile(filename, data, 'utf8', (err) => {
