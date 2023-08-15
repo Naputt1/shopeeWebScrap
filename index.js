@@ -46,19 +46,25 @@ function downloadXLSX(data, shop, brand, filename){
     'desc',
     'brand',
     'favorite',
+    'product_info',
+    'product_address',
+  ]];
+
+  const productDetails = [[
+    'product_id', 
+    'product_options 1', // 17
+    'product_options 2', 
     'option stock', //12
     'option price',
     'option fullprice', 
-    'product_info',
-    'product_address',
-    'product_options 1', // 17
-    'product_options 2', 
   ]];
 
   let fullInfoList = [];
+  let fullDetailList = [];
 
   data.forEach(product => {
     const infoList = [];
+    const detailList = [];
     for (let i = 0; i < dataSheet[0].length; i++){
       if (dataSheet[0][i] === 'brand'){
         if (product['product_info'].hasOwnProperty('ยี่ห้อ')){
@@ -75,8 +81,12 @@ function downloadXLSX(data, shop, brand, filename){
         infoList.push(JSON.stringify(product['product_info'], null, 2));
         continue;
       }
+      if (dataSheet[0][i] === 'ID'){
+        detailList.push([product[dataSheet[0][i]]], '', '', '', '', '')
+      }
       infoList.push(product[dataSheet[0][i]]);
     }
+    
 
     const process_product_by_option = (info, infoIndex, name, optionStart, infoStart, newData) => {
 
@@ -104,8 +114,10 @@ function downloadXLSX(data, shop, brand, filename){
       return genData;
     };
     
-    fullInfoList = fullInfoList.concat(process_product_by_option(product['product_info_by_option'], 0, product['product_options'], 17, 12, infoList));
+    fullInfoList.push(infoList);
+    fullDetailList = fullDetailList.concat(process_product_by_option(product['product_info_by_option'], 0, product['product_options'], 1, 3, detailList));
   });
+  
 
   const productSheet = dataSheet.concat(fullInfoList);
   
@@ -147,11 +159,13 @@ function downloadXLSX(data, shop, brand, filename){
   const ws1 = XLSX.utils.aoa_to_sheet(productSheet);
   const ws2 = XLSX.utils.aoa_to_sheet(shopSheet);
   const ws3 = XLSX.utils.aoa_to_sheet(brandSheet);
+  const ws4 = XLSX.utils.aoa_to_sheet(productDetails.concat(fullDetailList));
 
   // Add worksheets to the workbook
   XLSX.utils.book_append_sheet(workbook, ws1, 'product');
   XLSX.utils.book_append_sheet(workbook, ws2, 'shop');
   XLSX.utils.book_append_sheet(workbook, ws3, 'brand');
+  XLSX.utils.book_append_sheet(workbook, ws4, 'product details');
 
   // Generate Excel file 
   const excelFilePath = filename;
@@ -178,22 +192,22 @@ const main = async () => {
 
     let pageCount = 0;
     //scrape product links
-    while (true){
-      pageCount++;
-      linkList = linkList.concat(await getAllLinksInRow(page));
+    // while (true){
+    //   pageCount++;
+    //   linkList = linkList.concat(await getAllLinksInRow(page));
 
-      if (await checkForNextPage(page) && pageCount <= pagelimit) {
-        console.log("wait for navigation");
-        await Promise.all([
-          page.waitForNavigation(),
-          page.click("button.shopee-icon-button--right"),
-        ]);
-        console.log("finished navigation");
-        await wait(waitPeriod_page);
-        continue;
-      }
-      break;
-    } 
+    //   if (await checkForNextPage(page) && pageCount <= pagelimit) {
+    //     console.log("wait for navigation");
+    //     await Promise.all([
+    //       page.waitForNavigation(),
+    //       page.click("button.shopee-icon-button--right"),
+    //     ]);
+    //     console.log("finished navigation");
+    //     await wait(waitPeriod_page);
+    //     continue;
+    //   }
+    //   break;
+    // } 
 
 
     //scrape data
@@ -203,7 +217,7 @@ const main = async () => {
     let count = 0;
     // linkList
     let addresss = ['/🔥ส่งฟรี🔥-มีดตัดเค้ก-สแตนเลสแท้-WANNA-มีให้เลือก-3-รูปแบบ-3-ขนาด-มีดหั่นเค้ก-มีดหั่นขนมปัง-มีดตัดเค้ก-มีดตัดขนมเค้ก-i.283431996.4960495896?sp_atk=7b77e0d0-6027-4c51-878b-f20abf691f4f&xptdk=7b77e0d0-6027-4c51-878b-f20abf691f4f']
-    for (address of linkList){
+    for (address of addresss){
       count ++;
       console.log(count)
       while (true){
